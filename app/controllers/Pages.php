@@ -13,8 +13,12 @@
 			//Set Data
 			$products = $this->productModel->getProducts();
 			
-			// Store the total cash in a session 
-			$_SESSION["total_cash"] = 100;
+			// Store the total cash in a session
+			if(isset($_SESSION["cost"])) {
+				$_SESSION["total_cash"] = $_SESSION["cost"];
+			} else {
+				$_SESSION["total_cash"] = 100;
+			}
 			
 			// Store data
 			$data = ["products" => $products];
@@ -75,8 +79,10 @@
 
 			}
 
+
+
 			// add items from the cart in different quantities.
-			if(isset($_POST["num"]) && isset($_POST["newQuantity"])) {
+			if(isset($_POST["num"]) && isset($_POST["newQuantity"]) && $_POST["newQuantity"] >= 1) {
 				if(isset($_POST["add"])) {
 					foreach ($_SESSION["cart_item"] as $key => $value) {
 						if($_POST["num"] == $value["code"]) {
@@ -114,8 +120,9 @@
 						if($_SESSION["cart_item"][$key]["rated"] < 1) {
 							$this->rateModel->insertNewRate($product_id, $rate);
 							$_SESSION["cart_item"][$key]["rated"] = 1;
+							$_SESSION["ratedMsg_" . $product_id] = "Thank you for rating.";
 						} else if($_SESSION["cart_item"][$key]["rated"] == 1){
-							$_SESSION["ratedMsg_" . $product_id] = "You rated once, thank you.";
+							$_SESSION["ratedMsg_" . $product_id] = "Thank you for rating.";
 						}
 					}
 			
@@ -125,10 +132,7 @@
 			// Delete the cart
 			} else if(isset($_GET["q"]) && $_GET["q"] === "delete_cart") {
 
-				foreach ($_SESSION["cart_item"] as $key => $value) {
-					unset($_SESSION["ratedMsg_" . $value["code"]]);
-					
-				}
+
 				// Unset sessions
 				unset($_SESSION["cart_item"]);
 				unset($_SESSION["trans-cost"]);
@@ -145,6 +149,7 @@
 			} else if(isset($_GET["trans-ups"])) {
 				
 					$_SESSION["trans-cost"] = 5;
+
 				
 				// Check for pay method
 			} else if(isset($_GET["pay"])) {
@@ -155,17 +160,31 @@
 								alert("Please choose transport type.")
 							</script>
 						<?php
+
 					} else {
+
+						$totalPrice = 0;
 						foreach ($_SESSION["cart_item"] as $key => $value) {
-							$_SESSION["total_cash"] -= $_SESSION["cart_item"][$key]["price"] + $_SESSION["trans-cost"];
+							$totalPrice += $_SESSION["cart_item"][$key]["price"];	
+						}
+						if ($_SESSION["total_cash"] < $totalPrice + $_SESSION["trans-cost"]) {
+							?>
+								<script type="text/javascript">
+									alert("Sorry you have not enough money!")
+								</script>
+							<?php
+						} else {
+							$_SESSION["total_cash"] -= $totalPrice + $_SESSION["trans-cost"];
+							$_SESSION["cost"] = $_SESSION["total_cash"];
+							foreach ($_SESSION["cart_item"] as $key => $value) {
+								unset($_SESSION["cart_item"][$key]);
+								unset($_SESSION["trans-cost"]);
+								redirect("");
+							}
 						}
 					}
 				}
 			}	
-
-
-
-			
 
 
 	
